@@ -64,10 +64,16 @@ export default {
 				}
 			}
 		}
+		// Get headers
+		const headers: Record<string, string> = {};
+		for (const [key, value] of response.headers.entries()) {
+			headers[key] = value;
+		}
+
 		await env.CACHE_KV.put(
 			url,
 			JSON.stringify({
-				headers: response.headers,
+				headers,
 				body: text,
 				timestamp: Date.now(),
 			}),
