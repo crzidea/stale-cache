@@ -14,6 +14,7 @@
 type CachedResponse = {
 	headers: Record<string, string>;
 	body: string;
+	timestamp: number;
 };
 
 function responseContent(body: string, headers: Record<string, string> = {}) {
@@ -25,16 +26,30 @@ function responseContent(body: string, headers: Record<string, string> = {}) {
 	});
 }
 
+const MIN_TTL = 60;
+
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		console.log(request.url);
 		const params = new URL(request.url).searchParams;
 		const url = params.get('url');
 		const regex = params.get('regex');
-		const ttl = params.get('ttl');
+		const ttl = parseInt(params.get('ttl') || '0');
+
 		if (!url) {
 			return new Response('Missing url param', { status: 400 });
 		}
+		const cachedString = await env.CACHE_KV.get(url);
+		let cached: CachedResponse | null = null;
+		if (cachedString) {
+			cached = JSON.parse(cachedString);
+			if (cached) {
+				if (Date.now() - cached.timestamp < ttl * 1000) {
+					return responseContent(cached.body, cached.headers);
+				}
+			}
+		}
+
 		const response = await fetch(url);
 		let text = await response.text();
 
@@ -42,9 +57,7 @@ export default {
 			const re = new RegExp(regex);
 			const matched = re.test(text);
 			if (!matched) {
-				const cachedString = await env.CACHE_KV.get(url);
-				if (cachedString) {
-					const cached: CachedResponse = JSON.parse(cachedString);
+				if (cached) {
 					return responseContent(cached.body, cached.headers);
 				} else {
 					return responseContent(text);
@@ -56,10 +69,11 @@ export default {
 			JSON.stringify({
 				headers: response.headers,
 				body: text,
+				timestamp: Date.now(),
 			}),
 			{
 				// At least 60 seconds TTL
-				expirationTtl: ttl ? parseInt(ttl) : 60,
+				expirationTtl: ttl < MIN_TTL ? MIN_TTL : ttl,
 			}
 		);
 		return responseContent(text);
