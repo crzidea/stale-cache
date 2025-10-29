@@ -52,6 +52,11 @@ export default {
 
 		const response = await fetch(url);
 		let text = await response.text();
+		// Get headers
+		const headers: Record<string, string> = {};
+		for (const [key, value] of response.headers.entries()) {
+			headers[key] = value;
+		}
 
 		if (regex) {
 			const re = new RegExp(regex);
@@ -60,14 +65,9 @@ export default {
 				if (cached) {
 					return responseContent(cached.body, cached.headers);
 				} else {
-					return responseContent(text);
+					return responseContent(text, headers);
 				}
 			}
-		}
-		// Get headers
-		const headers: Record<string, string> = {};
-		for (const [key, value] of response.headers.entries()) {
-			headers[key] = value;
 		}
 
 		await env.CACHE_KV.put(
@@ -82,6 +82,6 @@ export default {
 				expirationTtl: ttl < MIN_TTL ? MIN_TTL : ttl,
 			}
 		);
-		return responseContent(text);
+		return responseContent(text, headers);
 	},
 } satisfies ExportedHandler<Env>;
