@@ -26,8 +26,7 @@
 	 */
 	"kv_namespaces": [
 		{
-			"binding": "CACHE_KV",
-			"id": "stale-cache-cache-kv"
+			"binding": "CACHE_KV"
 		}
 	]
 	/**
