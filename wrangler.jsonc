@@ -6,8 +6,11 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "stale-cache",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-10-24",
+	"compatibility_date": "2026-05-01",
 	"observability": {
+		"enabled": true
+	},
+	"cache": {
 		"enabled": true
 	},
 	/**
@@ -24,6 +27,7 @@
 	"kv_namespaces": [
 		{
 			"binding": "CACHE_KV",
+			"id": "stale-cache-cache-kv"
 		}
 	]
 	/**

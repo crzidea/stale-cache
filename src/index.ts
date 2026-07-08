@@ -45,7 +45,13 @@ export default {
 			cached = JSON.parse(cachedString);
 			if (cached) {
 				if (Date.now() - cached.timestamp < ttl * 1000) {
-					return responseContent(cached.body, cached.headers);
+					const age = Math.floor((Date.now() - cached.timestamp) / 1000);
+					const remainingTtl = ttl - age;
+					const cacheTtl = remainingTtl < MIN_TTL ? MIN_TTL : remainingTtl;
+					return responseContent(cached.body, {
+						...cached.headers,
+						'cache-control': `public, max-age=${cacheTtl}`,
+					});
 				}
 			}
 		}
@@ -70,6 +76,7 @@ export default {
 			}
 		}
 
+		const cacheTtl = ttl < MIN_TTL ? MIN_TTL : ttl;
 		await env.CACHE_KV.put(
 			url,
 			JSON.stringify({
@@ -79,9 +86,12 @@ export default {
 			}),
 			{
 				// At least 60 seconds TTL
-				expirationTtl: ttl < MIN_TTL ? MIN_TTL : ttl,
+				expirationTtl: cacheTtl,
 			}
 		);
-		return responseContent(text, headers);
+		return responseContent(text, {
+			...headers,
+			'cache-control': `public, max-age=${cacheTtl}`,
+		});
 	},
 } satisfies ExportedHandler<Env>;
